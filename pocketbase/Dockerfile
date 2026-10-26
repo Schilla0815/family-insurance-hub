@@ -1,6 +1,6 @@
 FROM alpine:3.20
 
-ARG PB_VERSION=0.25.8
+ARG PB_VERSION=0.22.29
 ARG TARGETARCH=amd64
 
 RUN apk add --no-cache \

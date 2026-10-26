@@ -32,8 +32,7 @@ services:
       - NEXT_PUBLIC_PAPERLESS_PUBLIC_URL=${NEXT_PUBLIC_PAPERLESS_PUBLIC_URL:-}
       - PAPERLESS_TOKEN=${PAPERLESS_TOKEN:-}
     depends_on:
-      pocketbase:
-        condition: service_healthy
+      - pocketbase
 
   sqlite-backup:
     image: alpine:3.20
