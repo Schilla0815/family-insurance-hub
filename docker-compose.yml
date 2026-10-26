@@ -1,0 +1,48 @@
+services:
+  pocketbase:
+    build:
+      context: ./pocketbase
+      dockerfile: Dockerfile
+    container_name: family-hub-pocketbase
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./pb_data:/pb/pb_data
+      - ./pocketbase/pb_migrations:/pb/pb_migrations
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8090/api/health || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: family-hub-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_POCKETBASE_URL=${NEXT_PUBLIC_POCKETBASE_URL:-}
+      - POCKETBASE_INTERNAL_URL=${POCKETBASE_INTERNAL_URL:-http://pocketbase:8090}
+      - PAPERLESS_URL=${PAPERLESS_URL:-}
+      - NEXT_PUBLIC_PAPERLESS_PUBLIC_URL=${NEXT_PUBLIC_PAPERLESS_PUBLIC_URL:-}
+      - PAPERLESS_TOKEN=${PAPERLESS_TOKEN:-}
+    depends_on:
+      pocketbase:
+        condition: service_healthy
+
+  sqlite-backup:
+    image: alpine:3.20
+    container_name: family-hub-backup
+    restart: unless-stopped
+    volumes:
+      - ./pb_data:/pb_data:ro
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    environment:
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
+    command: ["sh", "-c", "apk add --no-cache sqlite && chmod +x /backup.sh && echo '0 3 * * * /backup.sh' > /etc/crontabs/root && /backup.sh && crond -f -l 2"]
