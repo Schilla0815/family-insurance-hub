@@ -49,6 +49,7 @@ export default function SettingsPage() {
     exportBackupJson,
     importBackupJson,
     resetToDemoDefaults,
+    clearAllData,
     setCalendarExportModalOpen,
     setEmergencyBinderModalOpen,
     setTaxReportModalOpen,
@@ -808,11 +809,36 @@ export default function SettingsPage() {
 
             <button
               type="button"
-              onClick={resetToDemoDefaults}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 px-3 py-2 text-xs font-bold transition-all cursor-pointer"
+              onClick={() => {
+                if (
+                  confirm(
+                    "Möchtest du alle Demo-Verträge und Beispieldaten entfernen, um mit deinem eigenen Haushalt sauber zu starten?"
+                  )
+                ) {
+                  clearAllData();
+                }
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 px-3 py-2 text-xs font-bold transition-all cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Beispieldaten leeren (Frischer Start)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  confirm(
+                    "Möchtest du die Standard-Demo-Daten wiederherstellen? Deine aktuellen Einträge werden dabei überschrieben."
+                  )
+                ) {
+                  resetToDemoDefaults();
+                }
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 px-3 py-2 text-xs font-semibold transition-all cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Demo-Daten zurücksetzen
+              Demo-Daten wiederherstellen
             </button>
           </div>
         </section>

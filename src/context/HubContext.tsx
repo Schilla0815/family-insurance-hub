@@ -112,6 +112,7 @@ interface HubContextValue {
   exportBackupJson: () => string;
   importBackupJson: (rawJson: string) => { ok: boolean; message: string };
   resetToDemoDefaults: () => void;
+  clearAllData: () => void;
 
   // Global Modals & Drawers
   calendarExportModalOpen: boolean;
@@ -623,6 +624,24 @@ export function HubProvider({ children }: { children: React.ReactNode }) {
     showToast("Standard-Familiendaten & Katalog wiederhergestellt");
   }, [showToast]);
 
+  const clearAllData = useCallback(() => {
+    setContracts([]);
+    setClaims([]);
+    setMilestoneOverrides({});
+    setMembers([
+      {
+        id: "mem_self",
+        first_name: "Ich",
+        role: "Versicherungsnehmer",
+        birth_date: "1990-01-01",
+        avatar_color: "blue",
+        avatar_emoji: "👤",
+      },
+    ]);
+    setSelectedMemberId("all");
+    showToast("Beispieldaten geleert – Du kannst jetzt deine echten Verträge erfassen!");
+  }, [showToast]);
+
   const openContractModal = useCallback((draft?: ContractModalDraft) => {
     setContractModalDraft(draft ?? {});
   }, []);
@@ -689,6 +708,7 @@ export function HubProvider({ children }: { children: React.ReactNode }) {
       exportBackupJson,
       importBackupJson,
       resetToDemoDefaults,
+      clearAllData,
       contractModalDraft,
       openContractModal,
       closeContractModal,
@@ -744,6 +764,7 @@ export function HubProvider({ children }: { children: React.ReactNode }) {
       exportBackupJson,
       importBackupJson,
       resetToDemoDefaults,
+      clearAllData,
       contractModalDraft,
       openContractModal,
       closeContractModal,
