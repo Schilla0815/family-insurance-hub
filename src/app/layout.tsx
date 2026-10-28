@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 import { HubProvider } from "@/context/HubContext";
 import { AppShell } from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
   title: "FamilyHub — Versicherungen & Abos",
   description:
-    "Selbstgehostete Familien-Versicherungs- und Abo-Verwaltung mit Wallos-Design und Paperless-ngx Integration",
+    "Selbstgehostete Familien-Versicherungs- und Abo-Verwaltung mit Paperless-ngx Integration",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon.svg",
@@ -36,9 +37,11 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased selection:bg-emerald-500 selection:text-white">
-        <HubProvider>
-          <AppShell>{children}</AppShell>
-        </HubProvider>
+        <AuthProvider>
+          <HubProvider>
+            <AppShell>{children}</AppShell>
+          </HubProvider>
+        </AuthProvider>
       </body>
     </html>
   );

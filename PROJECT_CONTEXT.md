@@ -1,7 +1,7 @@
 # Family Insurance & Subscription Hub
 
 ## 1. Projektziel
-Eine selbstgehostete Open-Source-Webanwendung zur ganzheitlichen Verwaltung aller Familienversicherungen und wiederkehrenden Abos (inspiriert vom Dashboard-Design von Wallos, jedoch erweitert um relationale Familien- und Versicherungsfeatures sowie einen frei per Ankreuzen konfigurierbaren Versicherungs- und Abo-Katalog). Das Projekt wird im Antigravity-Workspace entwickelt und per Docker auf dem lokalen NAS betrieben.
+Eine selbstgehostete Open-Source-Webanwendung zur ganzheitlichen Verwaltung aller Familienversicherungen und wiederkehrenden Abos mit relationalen Familien- und Versicherungsfeatures sowie einem frei per Ankreuzen konfigurierbaren Versicherungs- und Abo-Katalog. Das Projekt wird im Antigravity-Workspace entwickelt und per Docker auf dem lokalen NAS betrieben.
 
 ## 2. Architektur & Tech-Stack
 * **Architektur:** Option A (Eigenständige All-in-One-Lösung mit `paperless-ngx`-Anbindung).

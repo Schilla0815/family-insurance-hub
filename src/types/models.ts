@@ -1,3 +1,15 @@
+export type UserRole = "admin" | "member";
+
+export interface UserAccount {
+  id: string;
+  username: string; // Kleinbuchstaben, eindeutig
+  displayName: string;
+  passwordHash: string;
+  role: UserRole;
+  createdAt: string; // ISO
+  lastLoginAt?: string; // ISO
+}
+
 export type ContractType = "insurance" | "subscription";
 
 export type PriorityTier = "muss" | "empfohlen" | "kann";

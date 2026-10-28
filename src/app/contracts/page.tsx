@@ -171,7 +171,7 @@ export default function ContractsPage() {
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Wallos-Kacheln</span>
+              <span>Kachelansicht</span>
             </button>
             <button
               type="button"
@@ -281,7 +281,7 @@ export default function ContractsPage() {
       </div>
 
       {/* ================================================================= */}
-      {/* VIEW 1: WALLOS-STYLE SUBSCRIPTION CARDS GRID                      */}
+      {/* VIEW 1: SUBSCRIPTION CARDS GRID                                  */}
       {/* ================================================================= */}
       {viewMode === "cards" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -372,7 +372,7 @@ export default function ContractsPage() {
                     </span>
                   </div>
 
-                  {/* Primary Price Section (Wallos signature design) */}
+                  {/* Primary Price Section */}
                   <div className="rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-[#161c2a] p-3 flex items-center justify-between">
                     <div>
                       <div className="text-xl font-black tabular-nums text-slate-900 dark:text-white tracking-tight">
@@ -386,7 +386,7 @@ export default function ContractsPage() {
                       </div>
                     </div>
 
-                    {/* Next Payment Countdown (Wallos signature) */}
+                    {/* Next Payment Countdown */}
                     {daysUntilPay !== null && (
                       <div className="text-right">
                         <div className="text-[10px] uppercase font-bold text-slate-400">

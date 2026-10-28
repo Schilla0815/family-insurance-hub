@@ -9,7 +9,7 @@
   accent-color: light-dark(var(--accent-brand-light), var(--accent-brand-dark));
 }
 
-/* Base body & surface styling - Wallos inspired clean contrast */
+/* Base body & surface styling */
 html, body {
   max-width: 100vw;
   overflow-x: hidden;

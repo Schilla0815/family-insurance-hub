@@ -125,7 +125,7 @@ export default function DashboardPage() {
     };
   }, [visibleActiveContracts]);
 
-  // Upcoming payments sorted by next_payment_date (Wallos Signature)
+  // Upcoming payments sorted by next_payment_date
   const upcomingPayments = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -270,7 +270,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ================================================================= */}
-      {/* 2. WALLOS-STYLE METRIC TILES                                      */}
+      {/* 2. METRIC TILES                                                   */}
       {/* ================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 sm:gap-4">
         {/* Tile 1: Total Monthly */}
@@ -415,10 +415,10 @@ export default function DashboardPage() {
       </div>
 
       {/* ================================================================= */}
-      {/* 3. WALLOS SIGNATURE: UPCOMING PAYMENTS & TOP SPENDING SPLIT       */}
+      {/* 3. UPCOMING PAYMENTS & TOP SPENDING SPLIT                         */}
       {/* ================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Nächste Zahlungen (Wallos Core Signature) */}
+        {/* Left Column: Nächste Zahlungen */}
         <section className="lg:col-span-2 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 bg-white dark:bg-[#121622] p-5 sm:p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -509,7 +509,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Right Column: Top Category Cost Breakdown (Wallos Stats) */}
+        {/* Right Column: Top Category Cost Breakdown */}
         <section className="rounded-2xl border border-slate-200/90 dark:border-slate-800/80 bg-white dark:bg-[#121622] p-5 sm:p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -567,7 +567,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ================================================================= */}
-      {/* 4. WALLOS YEARLY CASHFLOW FORECAST (SEASONAL PEAKS)              */}
+      {/* 4. YEARLY CASHFLOW FORECAST (SEASONAL PEAKS)                      */}
       {/* ================================================================= */}
       <section className="rounded-2xl border border-slate-200/90 dark:border-slate-800/80 bg-white dark:bg-[#121622] p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">

@@ -11,6 +11,7 @@ import {
   HeartHandshake,
   LayoutDashboard,
   Layers,
+  LogOut,
   PhoneCall,
   Plus,
   Search,
@@ -21,6 +22,8 @@ import {
   Wallet,
 } from "lucide-react";
 import { useHub } from "@/context/HubContext";
+import { useAuth } from "@/context/AuthContext";
+import { LoginView } from "@/components/auth/LoginView";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { ContractDetailModal } from "@/components/contracts/ContractDetailModal";
 import { ContractFormModal } from "@/components/contracts/ContractFormModal";
@@ -73,6 +76,7 @@ const NAV_ITEMS = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { currentUser, isAuthenticated, hydrated, logout, isAdmin } = useAuth();
   const {
     members,
     selectedMemberId,
@@ -85,6 +89,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     categories,
     paperlessConfig,
   } = useHub();
+
+  if (!hydrated) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-[#0c0e14]">
+        <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginView />;
+  }
 
   const activeContracts = contracts.filter(
     (c) => c.status === "active" && !c.is_hidden
@@ -100,7 +116,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh flex flex-col lg:flex-row bg-slate-50 dark:bg-[#0c0e14] text-slate-900 dark:text-slate-100 transition-colors duration-150 w-full max-w-full overflow-x-hidden">
       {/* ================================================================= */}
-      {/* DESKTOP SIDEBAR (Wallos-inspired clean obsidian / slate design)   */}
+      {/* DESKTOP SIDEBAR                                                   */}
       {/* ================================================================= */}
       <aside className="hidden lg:flex lg:w-68 lg:flex-col lg:fixed lg:inset-y-0 border-r border-slate-200/90 dark:border-slate-800/80 bg-white dark:bg-[#121622] z-30 shadow-xs">
         {/* Brand Header */}
@@ -123,7 +139,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
 
-        {/* Quick Action: New Contract (Wallos style) */}
+        {/* Quick Action: New Contract */}
         <div className="p-3.5 pb-2">
           <button
             type="button"
@@ -224,6 +240,44 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="text-[10px] text-slate-400">pro Monat</div>
             </div>
           </div>
+
+          {/* User Account & Logout */}
+          <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div
+                className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                  isAdmin
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                    : "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                }`}
+              >
+                {isAdmin ? "🛡️" : "👤"}
+              </div>
+              <div className="min-w-0 truncate">
+                <span className="font-bold text-xs text-slate-900 dark:text-white truncate block">
+                  {currentUser?.displayName || currentUser?.username}
+                </span>
+                <span
+                  className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded inline-block ${
+                    isAdmin
+                      ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300"
+                      : "bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300"
+                  }`}
+                >
+                  {isAdmin ? "Admin" : "Mitglied"}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={logout}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer shrink-0"
+              title={`Abmelden (${currentUser?.username})`}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -302,6 +356,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
                 {/* THEME TOGGLE: Bright / Dark Mode (Always visible on mobile & desktop) */}
                 <ThemeToggle className="shrink-0" />
+
+                {/* Header User Capsule & Logout */}
+                <div className="flex items-center gap-1 pl-1.5 border-l border-slate-200 dark:border-slate-800 shrink-0">
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded truncate max-w-[80px] sm:max-w-none ${
+                      isAdmin
+                        ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300"
+                        : "bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300"
+                    }`}
+                    title={`Eingeloggt als ${currentUser?.displayName} (@${currentUser?.username})`}
+                  >
+                    {currentUser?.username}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={logout}
+                    aria-label="Abmelden"
+                    title={`Abmelden (${currentUser?.username})`}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
 
                 {/* Mobile Quick Add (+) */}
                 <button
