@@ -248,13 +248,69 @@ export function HubProvider({ children }: { children: React.ReactNode }) {
       setHydrated(true);
     }
 
-    // Check PocketBase connection asynchronously
-    const pb = new PocketBase(pocketbaseUrl);
-    pb.health
-      .check()
-      .then(() => setPocketbaseConnected(true))
+    // Check PocketBase connection & pull central multi-device data asynchronously
+    fetch("/api/hub/sync")
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.connected) {
+          setPocketbaseConnected(true);
+          // If PocketBase contains data (from any device), adopt it as single source of truth
+          if (res.hasData && res.data) {
+            if (res.data.members?.length) setMembers(res.data.members);
+            if (res.data.providers?.length) setProviders(res.data.providers);
+            if (res.data.categories?.length) setCategories(res.data.categories);
+            if (res.data.contracts) setContracts(res.data.contracts);
+            if (res.data.claims) setClaims(res.data.claims);
+            if (res.data.milestones) setMilestoneOverrides(res.data.milestones);
+            if (res.data.paperlessConfig) {
+              setPaperlessConfig((prev) => ({ ...prev, ...res.data.paperlessConfig }));
+            }
+          }
+        } else {
+          setPocketbaseConnected(false);
+        }
+      })
       .catch(() => setPocketbaseConnected(false));
   }, [pocketbaseUrl]);
+
+  // Push updates to central PocketBase (debounced)
+  const isInitialLoadRef = React.useRef(true);
+  useEffect(() => {
+    if (!hydrated) return;
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetch("/api/hub/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          members,
+          providers,
+          categories,
+          contracts,
+          claims,
+          milestones: milestoneOverrides,
+          paperlessConfig,
+        }),
+      }).catch(() => {
+        // Silent network failure fallback to local storage
+      });
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [
+    hydrated,
+    members,
+    providers,
+    categories,
+    contracts,
+    claims,
+    milestoneOverrides,
+    paperlessConfig,
+  ]);
 
   // Persist changes to LocalStorage
   useEffect(() => {

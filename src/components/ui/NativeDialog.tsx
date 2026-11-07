@@ -23,52 +23,92 @@ export function NativeDialog({
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const titleId = useId();
 
+  const isBackdropMouseDownRef = useRef(false);
+
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
 
     if (open && !dialog.open) {
-      dialog.showModal();
+      try {
+        dialog.showModal();
+      } catch {
+        // Fallback wenn bereits offen oder modal-State geändert
+      }
     } else if (!open && dialog.open) {
       dialog.close();
     }
   }, [open]);
 
-  // Mandatory fallback for browsers without native <dialog closedby="any"> support
+  // Handle escape key & safe backdrop clicks (ignoring drag/text-selection releases)
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
 
-    const handleCloseEvent = () => {
+    // Native Escape key handler
+    const handleCancel = (event: Event) => {
+      event.preventDefault();
       onClose();
     };
-    dialog.addEventListener("close", handleCloseEvent);
 
-    const handleBackdropClick = (event: MouseEvent) => {
-      if ("closedBy" in HTMLDialogElement.prototype) return;
-      if (event.target !== dialog) return;
+    // Track mousedown: only register if the click STARTED on the backdrop
+    const handleMouseDown = (event: MouseEvent) => {
+      if (event.target !== dialog) {
+        isBackdropMouseDownRef.current = false;
+        return;
+      }
+
       const rect = dialog.getBoundingClientRect();
-      const isDialogContent =
+      const isInside =
         rect.top <= event.clientY &&
         event.clientY <= rect.top + rect.height &&
         rect.left <= event.clientX &&
         event.clientX <= rect.left + rect.width;
 
-      if (isDialogContent) return;
-      dialog.close();
+      isBackdropMouseDownRef.current = !isInside;
     };
 
-    dialog.addEventListener("click", handleBackdropClick);
+    // Safe mouseup/click: only close if mousedown ALSO started on the backdrop
+    const handleMouseUp = (event: MouseEvent) => {
+      const startedOnBackdrop = isBackdropMouseDownRef.current;
+      isBackdropMouseDownRef.current = false;
+
+      if (!startedOnBackdrop) return;
+      if (event.target !== dialog) return;
+
+      const rect = dialog.getBoundingClientRect();
+      const isInside =
+        rect.top <= event.clientY &&
+        event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX &&
+        event.clientX <= rect.left + rect.width;
+
+      if (!isInside) {
+        onClose();
+      }
+    };
+
+    // Reset backdrop click tracker on any window mouse release
+    const handleWindowMouseUp = () => {
+      isBackdropMouseDownRef.current = false;
+    };
+
+    dialog.addEventListener("cancel", handleCancel);
+    dialog.addEventListener("mousedown", handleMouseDown);
+    dialog.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("mouseup", handleWindowMouseUp);
+
     return () => {
-      dialog.removeEventListener("close", handleCloseEvent);
-      dialog.removeEventListener("click", handleBackdropClick);
+      dialog.removeEventListener("cancel", handleCancel);
+      dialog.removeEventListener("mousedown", handleMouseDown);
+      dialog.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("mouseup", handleWindowMouseUp);
     };
   }, [onClose]);
 
   return (
     <dialog
       ref={dialogRef}
-      {...({ closedby: "any" } as React.DialogHTMLAttributes<HTMLDialogElement>)}
       aria-labelledby={titleId}
       className={`w-full ${maxWidthClass} m-auto rounded-2xl border border-slate-200/90 dark:border-slate-800/80 bg-white dark:bg-[#121622] text-slate-900 dark:text-slate-100 shadow-2xl p-0 backdrop:bg-slate-950/70 backdrop:backdrop-blur-sm open:animate-in open:fade-in open:zoom-in-95`}
     >
@@ -85,8 +125,8 @@ export function NativeDialog({
         </div>
         <button
           type="button"
-          onClick={() => dialogRef.current?.close()}
-          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors"
+          onClick={onClose}
+          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
           aria-label="Dialog schließen"
         >
           <X className="w-5 h-5" />

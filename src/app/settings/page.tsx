@@ -16,6 +16,7 @@ import {
   HelpCircle,
   Loader2,
   Lock,
+  Pencil,
   Plus,
   Printer,
   Receipt,
@@ -32,8 +33,11 @@ import {
 import { useHub } from "@/context/HubContext";
 import { useAuth } from "@/context/AuthContext";
 import { UserManagementSection } from "@/components/admin/UserManagementSection";
+import { ProviderFormModal } from "@/components/providers/ProviderFormModal";
+import { MemberFormModal } from "@/components/settings/MemberFormModal";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { formatDateDE } from "@/lib/calculations";
+import { InsurerProvider, Member } from "@/types/models";
 
 const EMOJI_OPTIONS = ["👨‍💻", "👩‍⚕️", "👦", "👧", "👶", "🧑", "👵", "👴", "🐶", "🐱"];
 
@@ -90,6 +94,12 @@ export default function SettingsPage() {
       setMatchCorrespondent(paperlessConfig.autoMatchByCorrespondent);
     }
   }, [paperlessConfig]);
+
+  // Provider & Member Modal States
+  const [providerModalOpen, setProviderModalOpen] = useState(false);
+  const [providerToEdit, setProviderToEdit] = useState<InsurerProvider | null>(null);
+  const [memberModalOpen, setMemberModalOpen] = useState(false);
+  const [memberToEdit, setMemberToEdit] = useState<Member | null>(null);
 
   // New Member Form State
   const [newMemberName, setNewMemberName] = useState("");
@@ -549,47 +559,90 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-base font-extrabold flex items-center gap-2 text-slate-900 dark:text-white">
               <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              Familienmitglieder ({members.length})
+              <span>Familienmitglieder ({members.length})</span>
             </h2>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMemberToEdit(null);
+                setMemberModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Mitglied anlegen</span>
+            </button>
           </div>
 
           <div className="space-y-2">
             {members.map((m) => (
               <div
                 key={m.id}
-                className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-[#161c2a] p-3 text-xs"
+                className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-[#161c2a] p-3 text-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{m.avatar_emoji}</span>
-                  <div>
-                    <span className="font-bold text-slate-900 dark:text-white block">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-xl shrink-0">{m.avatar_emoji}</span>
+                  <div className="min-w-0">
+                    <span className="font-bold text-slate-900 dark:text-white block truncate">
                       {m.first_name}
                     </span>
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-[11px] text-slate-400 block truncate">
                       {m.role} • Geboren {formatDateDE(m.birth_date)}
                     </span>
+                    {m.health_insurance && (
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block truncate mt-0.5">
+                        GKV: {m.health_insurance} {m.insurance_number ? `(${m.insurance_number})` : ""}
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {members.length > 1 && (
+                <div className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
-                    onClick={() => deleteMember(m.id)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                    title="Löschen"
+                    onClick={() => {
+                      setMemberToEdit(m);
+                      setMemberModalOpen(true);
+                    }}
+                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    title="Familienmitglied bearbeiten (2 Schritte)"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Pencil className="w-3.5 h-3.5" />
                   </button>
-                )}
+
+                  {members.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => deleteMember(m.id)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                      title="Löschen"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
 
           {/* Add Member Form */}
           <form onSubmit={handleAddMember} className="pt-3 border-t border-slate-200/80 dark:border-slate-800 space-y-3">
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-              + Neues Familienmitglied anlegen:
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                + Schnellanlage:
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setMemberToEdit(null);
+                  setMemberModalOpen(true);
+                }}
+                className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
+              >
+                Geführter 2-Schritte-Assistent &gt;
+              </button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <input
                 type="text"
@@ -610,7 +663,7 @@ export default function SettingsPage() {
                 type="date"
                 value={newMemberBirth}
                 onChange={(e) => setNewMemberBirth(e.target.value)}
-                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#161c2a] text-slate-900 dark:text-white px-3 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500"
+                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#161c2a] text-slate-900 dark:text-white px-3 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 font-mono"
               />
             </div>
 
@@ -648,45 +701,96 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-base font-extrabold flex items-center gap-2 text-slate-900 dark:text-white">
               <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              Versicherer &amp; Dienstanbieter ({providers.length})
+              <span>Versicherer &amp; Anbieter ({providers.length})</span>
             </h2>
+
+            <button
+              type="button"
+              onClick={() => {
+                setProviderToEdit(null);
+                setProviderModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Anbieter anlegen</span>
+            </button>
           </div>
 
-          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
             {providers.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-[#161c2a] p-2.5 text-xs"
+                className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-[#161c2a] p-2.5 text-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
               >
-                <div className="min-w-0">
-                  <span className="font-bold text-slate-900 dark:text-white block truncate">
-                    {p.name}
-                  </span>
-                  <div className="text-[11px] text-slate-400 flex items-center gap-2 truncate">
+                <div className="min-w-0 space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-900 dark:text-white truncate">
+                      {p.name}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+                      {p.category_focus === "subscription" ? "📺 Abo" : "🛡️ Versicherung"}
+                    </span>
+                  </div>
+
+                  <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     {p.emergency_hotline && (
-                      <span>Hotline: {p.emergency_hotline}</span>
+                      <span className="text-slate-500 dark:text-slate-300 font-mono">
+                        Hotline: {p.emergency_hotline}
+                      </span>
                     )}
-                    {p.portal_url && <span>• Portal hinterlegt</span>}
+                    {p.paperless_correspondent_name && (
+                      <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
+                        <Tag className="w-3 h-3" />
+                        Paperless: {p.paperless_correspondent_name}
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => deleteProvider(p.id)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                  title="Löschen"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProviderToEdit(p);
+                      setProviderModalOpen(true);
+                    }}
+                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    title="Anbieter & Korrespondent bearbeiten (2 Schritte)"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => deleteProvider(p.id)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                    title="Löschen"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
 
-          {/* Add Provider Form */}
+          {/* Quick Add Provider Form */}
           <form onSubmit={handleAddProvider} className="pt-3 border-t border-slate-200/80 dark:border-slate-800 space-y-2.5">
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-              + Neuen Anbieter / Versicherer anlegen:
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                + Schnellanlage:
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setProviderToEdit(null);
+                  setProviderModalOpen(true);
+                }}
+                className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
+              >
+                Geführter 2-Schritte-Assistent mit Paperless &gt;
+              </button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input
                 type="text"
@@ -888,6 +992,26 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+
+      {/* Provider & Correspondent Modal with 2 Bearbeitungsschritte */}
+      <ProviderFormModal
+        open={providerModalOpen}
+        onClose={() => {
+          setProviderModalOpen(false);
+          setProviderToEdit(null);
+        }}
+        initialProvider={providerToEdit}
+      />
+
+      {/* Family Member Modal with 2 Bearbeitungsschritte */}
+      <MemberFormModal
+        open={memberModalOpen}
+        onClose={() => {
+          setMemberModalOpen(false);
+          setMemberToEdit(null);
+        }}
+        memberToEdit={memberToEdit}
+      />
     </div>
   );
 }

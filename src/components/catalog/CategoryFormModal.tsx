@@ -117,6 +117,7 @@ export function CategoryFormModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     const finalName = name.trim();
     if (!finalName) return;
 
