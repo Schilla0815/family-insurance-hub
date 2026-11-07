@@ -68,6 +68,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setCurrentUser(found);
         }
       }
+
+      // Check central PocketBase for synced users
+      fetch("/api/hub/sync")
+        .then((r) => r.json())
+        .then((res) => {
+          if (res.connected && res.data?.users && Array.isArray(res.data.users) && res.data.users.length > 0) {
+            setUsers(res.data.users);
+            try {
+              localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(res.data.users));
+            } catch {}
+          }
+        })
+        .catch(() => {});
     } catch {
       // ignore
     } finally {
@@ -75,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Persist users to LocalStorage whenever users list changes
+  // Persist users to LocalStorage whenever users list changes & sync to PocketBase
   const persistUsers = (newUsers: UserAccount[]) => {
     setUsers(newUsers);
     try {
@@ -83,6 +96,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
+    // Sync to backend PocketBase
+    fetch("/api/hub/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ users: newUsers }),
+    }).catch(() => {});
   };
 
   const login = (

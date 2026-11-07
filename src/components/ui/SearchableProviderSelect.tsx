@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Building2, Check, ChevronDown, Plus, Search } from "lucide-react";
+import { Building2, Check, ChevronDown, Pencil, Plus, Search } from "lucide-react";
 import { InsurerProvider } from "@/types/models";
 import { useHub } from "@/context/HubContext";
 import { ProviderFormModal } from "@/components/providers/ProviderFormModal";
@@ -20,6 +20,7 @@ export function SearchableProviderSelect({
   const [search, setSearch] = useState("");
   const [providerModalOpen, setProviderModalOpen] = useState(false);
   const [providerToCreateName, setProviderToCreateName] = useState("");
+  const [providerToEdit, setProviderToEdit] = useState<InsurerProvider | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -74,7 +75,15 @@ export function SearchableProviderSelect({
   );
 
   const handleOpenNewModal = (prefillName = "") => {
+    setProviderToEdit(null);
     setProviderToCreateName(prefillName);
+    setIsOpen(false);
+    setProviderModalOpen(true);
+  };
+
+  const handleOpenEditModal = (provider: InsurerProvider) => {
+    setProviderToEdit(provider);
+    setProviderToCreateName("");
     setIsOpen(false);
     setProviderModalOpen(true);
   };
@@ -87,32 +96,49 @@ export function SearchableProviderSelect({
         </label>
       )}
 
-      {/* Trigger Button */}
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full flex items-center justify-between gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-left focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors cursor-pointer hover:border-slate-400 dark:hover:border-slate-600"
-      >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="p-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
-            <Building2 className="w-4 h-4" />
+      {/* Trigger Button with Edit Shortcut */}
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="flex-1 flex items-center justify-between gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-left focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors cursor-pointer hover:border-slate-400 dark:hover:border-slate-600"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
+              <Building2 className="w-4 h-4" />
+            </div>
+            {selectedProvider ? (
+              <span className="font-medium text-slate-900 dark:text-white truncate">
+                {selectedProvider.name}
+              </span>
+            ) : (
+              <span className="text-slate-400 dark:text-slate-500">
+                Anbieter auswählen oder neu anlegen...
+              </span>
+            )}
           </div>
-          {selectedProvider ? (
-            <span className="font-medium text-slate-900 dark:text-white truncate">
-              {selectedProvider.name}
-            </span>
-          ) : (
-            <span className="text-slate-400 dark:text-slate-500">
-              Anbieter auswählen oder neu anlegen...
-            </span>
-          )}
-        </div>
-        <ChevronDown
-          className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        />
-      </button>
+          <ChevronDown
+            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {selectedProvider && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleOpenEditModal(selectedProvider);
+            }}
+            className="p-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+            title="Diesen Anbieter & Paperless-Korrespondenten bearbeiten"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
       {/* Dropdown Menu */}
       {isOpen && (
@@ -186,11 +212,15 @@ export function SearchableProviderSelect({
         </div>
       )}
 
-      {/* Embedded Provider Creation Modal */}
+      {/* Embedded Provider Creation & Editing Modal */}
       <ProviderFormModal
         open={providerModalOpen}
-        onClose={() => setProviderModalOpen(false)}
+        onClose={() => {
+          setProviderModalOpen(false);
+          setProviderToEdit(null);
+        }}
         initialName={providerToCreateName}
+        initialProvider={providerToEdit}
         onSaved={(newProvider) => {
           onChange(newProvider.id);
         }}

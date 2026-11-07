@@ -53,6 +53,9 @@ export interface Member {
   avatar_color: string;
   avatar_emoji: string;
   notes?: string;
+  health_insurance?: string; // z. B. Techniker Krankenkasse, Barmer
+  insurance_number?: string; // Krankenversichertennummer
+  linked_user_id?: string; // Optional verknüpftes UserAccount.id
 }
 
 export interface InsurerProvider {
@@ -64,6 +67,7 @@ export interface InsurerProvider {
   paperless_correspondent_id?: number;
   paperless_correspondent_name?: string;
   category_focus?: ContractType;
+  notes?: string;
 }
 
 export interface CatalogCategory {
