@@ -3,16 +3,94 @@ import {
   CancellationInfo,
   CatalogCategory,
   Contract,
+  ContractType,
   FamilyMilestone,
   InsurerProvider,
   Member,
   MilestoneOverride,
   MilestoneStatus,
+  NoticePeriodUnit,
   PriorityTier,
   TaxDeductibleCategory,
   TaxReportGroup,
   TaxReportItem,
 } from "@/types/models";
+
+export function getContractTypeLabel(type: ContractType): string {
+  switch (type) {
+    case "insurance":
+      return "Versicherung";
+    case "contract":
+      return "Vertrag / Fixkosten";
+    case "subscription":
+      return "Abo";
+    default:
+      return "Eintrag";
+  }
+}
+
+export function getNoticePeriodInDays(
+  value?: number,
+  unit?: NoticePeriodUnit,
+  fallbackDays?: number
+): number {
+  if (value !== undefined && value !== null && !Number.isNaN(value)) {
+    switch (unit) {
+      case "months":
+        return Math.round(value * 30);
+      case "weeks":
+        return Math.round(value * 7);
+      case "days":
+      default:
+        return Math.round(value);
+    }
+  }
+  return fallbackDays ?? 30;
+}
+
+export function formatTermAndNoticeSummary(contract: Contract): string {
+  if (contract.cancellation_terms_text?.trim()) {
+    return contract.cancellation_terms_text.trim();
+  }
+
+  const parts: string[] = [];
+
+  if (contract.initial_term_months && contract.initial_term_months > 0) {
+    parts.push(`${contract.initial_term_months} Mon. Mindestlaufzeit`);
+  }
+
+  if (contract.notice_period_value !== undefined && contract.notice_period_value > 0) {
+    const unitLabel =
+      contract.notice_period_unit === "months"
+        ? contract.notice_period_value === 1
+          ? "Monat"
+          : "Monate"
+        : contract.notice_period_unit === "weeks"
+        ? contract.notice_period_value === 1
+          ? "Woche"
+          : "Wochen"
+        : contract.notice_period_value === 1
+        ? "Tag"
+        : "Tage";
+    parts.push(`${contract.notice_period_value} ${unitLabel} Frist`);
+  } else if (contract.cancellation_period_days !== undefined) {
+    if (contract.cancellation_period_days <= 1) {
+      parts.push("Täglich / monatlich kündbar");
+    } else {
+      parts.push(`${contract.cancellation_period_days} Tage Frist`);
+    }
+  }
+
+  if (contract.auto_renewal_months && contract.auto_renewal_months > 0) {
+    if (contract.auto_renewal_months === 1) {
+      parts.push("danach monatlich kündbar");
+    } else {
+      parts.push(`Verlängerung um je ${contract.auto_renewal_months} Mon.`);
+    }
+  }
+
+  return parts.join(" • ") || "Laufend";
+}
 
 export function getMonthlyCost(cost: number, cycle: BillingCycle): number {
   if (!cost || cost <= 0) return 0;
@@ -143,15 +221,19 @@ export function getCancellationInfo(
   referenceDate: Date = new Date()
 ): CancellationInfo {
   if (!contract.contract_end_date || contract.status === "cancelled") {
+    const customSummary = formatTermAndNoticeSummary(contract);
     return {
       state: "none",
       daysUntilNoticeDeadline: null,
       noticeDeadlineDate: null,
       daysUntilContractEnd: null,
       label:
-        contract.cancellation_period_days && contract.cancellation_period_days <= 1
+        contract.cancellation_terms_text?.trim() ||
+        (contract.cancellation_period_days && contract.cancellation_period_days <= 1
           ? "Täglich / monatlich kündbar"
-          : "Laufend (monatlich kündbar)",
+          : customSummary !== "Laufend"
+          ? customSummary
+          : "Laufend (monatlich kündbar)"),
       shortLabel: "Flexibel",
     };
   }
@@ -168,7 +250,11 @@ export function getCancellationInfo(
     };
   }
 
-  const noticeDays = contract.cancellation_period_days ?? 30;
+  const noticeDays = getNoticePeriodInDays(
+    contract.notice_period_value,
+    contract.notice_period_unit,
+    contract.cancellation_period_days ?? 30
+  );
   const deadline = new Date(endDate);
   deadline.setDate(deadline.getDate() - noticeDays);
 

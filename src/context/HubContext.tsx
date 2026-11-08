@@ -12,6 +12,7 @@ import PocketBase from "pocketbase";
 import {
   CatalogCategory,
   Contract,
+  ContractType,
   InsuranceClaim,
   InsurerProvider,
   Member,
@@ -47,6 +48,33 @@ const DEFAULT_PAPERLESS_CONFIG: PaperlessConfig = {
   autoMatchByCorrespondent: true,
 };
 
+const CONTRACT_DEFAULT_SLUGS = new Set([
+  "internet_festnetz",
+  "mobilfunk",
+  "rundfunkbeitrag",
+  "energie_versorgung",
+  "mobilitaet_oepnv",
+  "sport_verein",
+]);
+
+function normalizeCategories(cats: CatalogCategory[]): CatalogCategory[] {
+  return cats.map((cat) => {
+    if (CONTRACT_DEFAULT_SLUGS.has(cat.slug) && cat.type === "subscription") {
+      return { ...cat, type: "contract" as ContractType };
+    }
+    return cat;
+  });
+}
+
+function normalizeContracts(cons: Contract[]): Contract[] {
+  return cons.map((con) => {
+    if (CONTRACT_DEFAULT_SLUGS.has(con.category_slug) && con.type === "subscription") {
+      return { ...con, type: "contract" as ContractType };
+    }
+    return con;
+  });
+}
+
 export interface PdfPreviewTarget {
   document: PaperlessDocument;
   contract?: Contract;
@@ -55,7 +83,7 @@ export interface PdfPreviewTarget {
 export interface ContractModalDraft {
   contract?: Contract;
   preselectedCategorySlug?: string;
-  preselectedType?: "insurance" | "subscription";
+  preselectedType?: ContractType;
 }
 
 interface HubContextValue {
@@ -78,7 +106,7 @@ interface HubContextValue {
   toggleCategoryVisibility: (slug: string) => void;
   setAllCategoriesVisibility: (
     visible: boolean,
-    typeFilter?: "insurance" | "subscription"
+    typeFilter?: ContractType
   ) => void;
   saveCategory: (
     category: Omit<CatalogCategory, "id"> & { id?: string }
@@ -109,12 +137,17 @@ interface HubContextValue {
   updatePaperlessConfig: (cfg: Partial<PaperlessConfig>) => void;
 
   // Backup & Restore
-  exportBackupJson: () => string;
+  exportBackupJson: (includeSecrets?: boolean) => string;
+  exportContractsCsv: () => string;
+  downloadDatabaseBackup: (format?: "json" | "csv") => void;
   importBackupJson: (rawJson: string) => { ok: boolean; message: string };
   resetToDemoDefaults: () => void;
   clearAllData: () => void;
 
   // Global Modals & Drawers
+  backupModalOpen: boolean;
+  setBackupModalOpen: (open: boolean) => void;
+
   calendarExportModalOpen: boolean;
   setCalendarExportModalOpen: (open: boolean) => void;
 
@@ -179,6 +212,7 @@ export function HubProvider({ children }: { children: React.ReactNode }) {
   const [detailContractId, setDetailContractId] = useState<string | null>(null);
   const [cancellationModalContractId, setCancellationModalContractId] =
     useState<string | null>(null);
+  const [backupModalOpen, setBackupModalOpen] = useState(false);
   const [calendarExportModalOpen, setCalendarExportModalOpen] = useState(false);
   const [taxReportModalOpen, setTaxReportModalOpen] = useState(false);
   const [emergencyBinderModalOpen, setEmergencyBinderModalOpen] = useState(false);
@@ -209,38 +243,65 @@ export function HubProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  const syncReadyRef = React.useRef(false);
+
   // Load initial state from LocalStorage & optionally check PocketBase health
   useEffect(() => {
+    let localMembers = INITIAL_MEMBERS;
+    let localProviders = INITIAL_PROVIDERS;
+    let localCategories = INITIAL_CATALOG_CATEGORIES;
+    let localContracts = INITIAL_CONTRACTS;
+    let localClaims = INITIAL_CLAIMS;
+    let localMilestones: Record<string, MilestoneOverride> = {};
+    let localPaperless = DEFAULT_PAPERLESS_CONFIG;
+
     try {
       const rawMembers = localStorage.getItem(STORAGE_KEYS.members);
-      if (rawMembers) setMembers(JSON.parse(rawMembers));
+      if (rawMembers) {
+        localMembers = JSON.parse(rawMembers);
+        setMembers(localMembers);
+      }
 
       const rawProviders = localStorage.getItem(STORAGE_KEYS.providers);
-      if (rawProviders) setProviders(JSON.parse(rawProviders));
+      if (rawProviders) {
+        localProviders = JSON.parse(rawProviders);
+        setProviders(localProviders);
+      }
 
       const rawCategories = localStorage.getItem(STORAGE_KEYS.categories);
       if (rawCategories) {
         const parsed: CatalogCategory[] = JSON.parse(rawCategories);
         if (parsed.length >= INITIAL_CATALOG_CATEGORIES.length) {
-          setCategories(parsed);
+          localCategories = normalizeCategories(parsed);
+          setCategories(localCategories);
         }
       }
 
       const rawContracts = localStorage.getItem(STORAGE_KEYS.contracts);
-      if (rawContracts) setContracts(JSON.parse(rawContracts));
+      if (rawContracts) {
+        localContracts = normalizeContracts(JSON.parse(rawContracts));
+        setContracts(localContracts);
+      }
 
       const rawClaims = localStorage.getItem(STORAGE_KEYS.claims);
-      if (rawClaims) setClaims(JSON.parse(rawClaims));
+      if (rawClaims) {
+        localClaims = JSON.parse(rawClaims);
+        setClaims(localClaims);
+      }
 
       const rawMilestones = localStorage.getItem(STORAGE_KEYS.milestones);
-      if (rawMilestones) setMilestoneOverrides(JSON.parse(rawMilestones));
+      if (rawMilestones) {
+        localMilestones = JSON.parse(rawMilestones);
+        setMilestoneOverrides(localMilestones);
+      }
 
       const rawPaperless = localStorage.getItem(STORAGE_KEYS.paperless);
       if (rawPaperless) {
-        setPaperlessConfig((prev) => ({
-          ...prev,
+        localPaperless = {
+          ...DEFAULT_PAPERLESS_CONFIG,
           ...JSON.parse(rawPaperless),
-        }));
+        };
+        setPaperlessConfig(localPaperless);
       }
     } catch {
       // Ignore storage access errors
@@ -254,33 +315,58 @@ export function HubProvider({ children }: { children: React.ReactNode }) {
       .then((res) => {
         if (res.connected) {
           setPocketbaseConnected(true);
-          // If PocketBase contains data (from any device), adopt it as single source of truth
+          // If PocketBase / persistent NAS store contains data, adopt it as single source of truth
           if (res.hasData && res.data) {
             if (res.data.members?.length) setMembers(res.data.members);
             if (res.data.providers?.length) setProviders(res.data.providers);
-            if (res.data.categories?.length) setCategories(res.data.categories);
-            if (res.data.contracts) setContracts(res.data.contracts);
+            if (res.data.categories?.length) {
+              setCategories(normalizeCategories(res.data.categories));
+            }
+            if (res.data.contracts) {
+              setContracts(normalizeContracts(res.data.contracts));
+            }
             if (res.data.claims) setClaims(res.data.claims);
             if (res.data.milestones) setMilestoneOverrides(res.data.milestones);
             if (res.data.paperlessConfig) {
-              setPaperlessConfig((prev) => ({ ...prev, ...res.data.paperlessConfig }));
+              setPaperlessConfig((prev) => ({
+                ...prev,
+                ...res.data.paperlessConfig,
+              }));
             }
+            setTimeout(() => {
+              syncReadyRef.current = true;
+            }, 250);
+          } else {
+            // Server is empty (first launch on NAS) -> push current local state once to initialize persistent DB
+            syncReadyRef.current = true;
+            fetch("/api/hub/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                members: localMembers,
+                providers: localProviders,
+                categories: localCategories,
+                contracts: localContracts,
+                claims: localClaims,
+                milestones: localMilestones,
+                paperlessConfig: localPaperless,
+              }),
+            }).catch(() => {});
           }
         } else {
           setPocketbaseConnected(false);
+          syncReadyRef.current = true;
         }
       })
-      .catch(() => setPocketbaseConnected(false));
+      .catch(() => {
+        setPocketbaseConnected(false);
+        syncReadyRef.current = true;
+      });
   }, [pocketbaseUrl]);
 
-  // Push updates to central PocketBase (debounced)
-  const isInitialLoadRef = React.useRef(true);
+  // Push updates to central PocketBase / persistent store (debounced)
   useEffect(() => {
-    if (!hydrated) return;
-    if (isInitialLoadRef.current) {
-      isInitialLoadRef.current = false;
-      return;
-    }
+    if (!hydrated || !syncReadyRef.current) return;
 
     const timer = setTimeout(() => {
       fetch("/api/hub/sync", {
@@ -298,7 +384,7 @@ export function HubProvider({ children }: { children: React.ReactNode }) {
       }).catch(() => {
         // Silent network failure fallback to local storage
       });
-    }, 1200);
+    }, 800);
 
     return () => clearTimeout(timer);
   }, [
@@ -383,7 +469,7 @@ export function HubProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setAllCategoriesVisibility = useCallback(
-    (visible: boolean, typeFilter?: "insurance" | "subscription") => {
+    (visible: boolean, typeFilter?: ContractType) => {
       setCategories((prev) =>
         prev.map((c) => {
           if (typeFilter && c.type !== typeFilter) return c;
@@ -618,24 +704,155 @@ export function HubProvider({ children }: { children: React.ReactNode }) {
     [showToast]
   );
 
-  const exportBackupJson = useCallback(() => {
-    const payload = {
-      app: "Family Insurance & Subscription Hub",
-      version: "1.2.0",
-      exportedAt: new Date().toISOString(),
-      members,
-      providers,
-      categories,
-      contracts,
-      claims,
-      milestoneOverrides,
-      paperlessConfig: {
-        ...paperlessConfig,
-        token: paperlessConfig.token ? "***REDACTED***" : "",
-      },
+  const exportBackupJson = useCallback(
+    (includeSecrets = true) => {
+      let usersData: unknown[] = [];
+      try {
+        const rawUsers = localStorage.getItem("family_hub_users_v1");
+        if (rawUsers) usersData = JSON.parse(rawUsers);
+      } catch {}
+
+      const payload = {
+        app: "Familien-Versicherungs-, Vertrags- & Abo-Hub",
+        format: "FAMILY_HUB_DB_SNAPSHOT_V2",
+        version: "2.0.0",
+        exportedAt: new Date().toISOString(),
+        stats: {
+          membersCount: members.length,
+          providersCount: providers.length,
+          categoriesCount: categories.length,
+          contractsCount: contracts.length,
+          insurancesCount: contracts.filter((c) => c.type === "insurance").length,
+          fixedContractsCount: contracts.filter((c) => c.type === "contract").length,
+          subscriptionsCount: contracts.filter((c) => c.type === "subscription").length,
+          claimsCount: claims.length,
+        },
+        members,
+        providers,
+        categories,
+        contracts,
+        claims,
+        milestoneOverrides,
+        users: usersData,
+        paperlessConfig: includeSecrets
+          ? paperlessConfig
+          : {
+              ...paperlessConfig,
+              token: paperlessConfig.token ? "***REDACTED***" : "",
+            },
+      };
+      return JSON.stringify(payload, null, 2);
+    },
+    [members, providers, categories, contracts, claims, milestoneOverrides, paperlessConfig]
+  );
+
+  const exportContractsCsv = useCallback(() => {
+    const escapeCsv = (val: unknown): string => {
+      if (val === null || val === undefined) return "";
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
     };
-    return JSON.stringify(payload, null, 2);
-  }, [members, providers, categories, contracts, claims, milestoneOverrides, paperlessConfig]);
+
+    const headers = [
+      "ID",
+      "Typ",
+      "Bezeichnung",
+      "Kategorie",
+      "Anbieter",
+      "Kundennummer",
+      "Policen-/Vertragsnummer",
+      "Beitrag (EUR)",
+      "Zahlungsweise",
+      "Status",
+      "Vertragsbeginn",
+      "Mindestlaufzeit (Monate)",
+      "Verlaengerung danach (Monate)",
+      "Kuendigungsfrist",
+      "Regelung / Konditionen",
+      "Naechste Verlaengerung / Ablauf",
+      "Zusatzfelder",
+      "Notizen",
+    ];
+
+    const rows = contracts.map((con) => {
+      const cat = categoriesMap.get(con.category_slug);
+      const prov = providers.find((p) => p.id === con.provider_id);
+      const typeLabel =
+        con.type === "insurance"
+          ? "Versicherung"
+          : con.type === "contract"
+          ? "Vertrag / Fixkosten"
+          : "Abo";
+      const custNo = con.customer_number || prov?.customer_number || "";
+      const noticeStr = con.notice_period_value
+        ? `${con.notice_period_value} ${
+            con.notice_period_unit === "months"
+              ? "Monat(e)"
+              : con.notice_period_unit === "weeks"
+              ? "Woche(n)"
+              : "Tag(e)"
+          }`
+        : `${con.cancellation_period_days} Tage`;
+      const customFieldsStr = (con.custom_fields || [])
+        .map((f) => `${f.label}: ${f.value}`)
+        .join(" | ");
+
+      return [
+        con.id,
+        typeLabel,
+        con.title,
+        cat?.name || con.category_slug,
+        prov?.name || con.provider_id,
+        custNo,
+        con.policy_number || "",
+        String(con.cost).replace(".", ","),
+        con.billing_cycle,
+        con.status,
+        con.contract_start_date || "",
+        con.initial_term_months ?? "",
+        con.auto_renewal_months ?? "",
+        noticeStr,
+        con.cancellation_terms_text || "",
+        con.contract_end_date || "",
+        customFieldsStr,
+        con.notes || "",
+      ]
+        .map(escapeCsv)
+        .join(";");
+    });
+
+    // Prefix UTF-8 BOM so Microsoft Excel opens umlauts and columns cleanly
+    return "\uFEFF" + [headers.map(escapeCsv).join(";"), ...rows].join("\r\n");
+  }, [contracts, categoriesMap, providers]);
+
+  const downloadDatabaseBackup = useCallback(
+    (format: "json" | "csv" = "json") => {
+      const dateStr = new Date().toISOString().slice(0, 10);
+      if (format === "csv") {
+        const csv = exportContractsCsv();
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `familien-vertraege-export-${dateStr}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast("CSV-Tabellenexport heruntergeladen");
+        return;
+      }
+
+      const json = exportBackupJson(true);
+      const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `familien-datenbank-sicherung-${dateStr}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("Vollständige Datenbank-Sicherung (.json) heruntergeladen");
+    },
+    [exportBackupJson, exportContractsCsv, showToast]
+  );
 
   const importBackupJson = useCallback(
     (rawJson: string): { ok: boolean; message: string } => {
@@ -650,14 +867,32 @@ export function HubProvider({ children }: { children: React.ReactNode }) {
         }
         setMembers(parsed.members);
         if (Array.isArray(parsed.providers)) setProviders(parsed.providers);
-        if (Array.isArray(parsed.categories)) setCategories(parsed.categories);
-        setContracts(parsed.contracts);
+        if (Array.isArray(parsed.categories)) {
+          setCategories(normalizeCategories(parsed.categories));
+        }
+        setContracts(normalizeContracts(parsed.contracts));
         if (Array.isArray(parsed.claims)) setClaims(parsed.claims);
         if (parsed.milestoneOverrides && typeof parsed.milestoneOverrides === "object") {
           setMilestoneOverrides(parsed.milestoneOverrides);
         }
-        showToast("Backup erfolgreich wiederhergestellt");
-        return { ok: true, message: "Backup erfolgreich importiert!" };
+        if (parsed.paperlessConfig && typeof parsed.paperlessConfig === "object") {
+          setPaperlessConfig((prev) => ({
+            ...prev,
+            ...parsed.paperlessConfig,
+            token:
+              parsed.paperlessConfig.token &&
+              parsed.paperlessConfig.token !== "***REDACTED***"
+                ? parsed.paperlessConfig.token
+                : prev.token,
+          }));
+        }
+        if (Array.isArray(parsed.users) && parsed.users.length > 0) {
+          try {
+            localStorage.setItem("family_hub_users_v1", JSON.stringify(parsed.users));
+          } catch {}
+        }
+        showToast("Datenbank-Backup erfolgreich wiederhergestellt & synchronisiert");
+        return { ok: true, message: "Datenbank-Backup erfolgreich importiert!" };
       } catch (e) {
         return {
           ok: false,
@@ -762,9 +997,13 @@ export function HubProvider({ children }: { children: React.ReactNode }) {
       deleteProvider,
       updatePaperlessConfig,
       exportBackupJson,
+      exportContractsCsv,
+      downloadDatabaseBackup,
       importBackupJson,
       resetToDemoDefaults,
       clearAllData,
+      backupModalOpen,
+      setBackupModalOpen,
       contractModalDraft,
       openContractModal,
       closeContractModal,
@@ -818,9 +1057,12 @@ export function HubProvider({ children }: { children: React.ReactNode }) {
       deleteProvider,
       updatePaperlessConfig,
       exportBackupJson,
+      exportContractsCsv,
+      downloadDatabaseBackup,
       importBackupJson,
       resetToDemoDefaults,
       clearAllData,
+      backupModalOpen,
       contractModalDraft,
       openContractModal,
       closeContractModal,

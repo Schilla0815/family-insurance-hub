@@ -57,7 +57,7 @@ export default function DashboardPage() {
 
   const [showHiddenContracts, setShowHiddenContracts] = useState(false);
   const [typeFilter, setTypeFilter] = useState<
-    "all" | "insurance" | "subscription"
+    "all" | "insurance" | "contract" | "subscription"
   >("all");
 
   const selectedMember = members.find((m) => m.id === selectedMemberId);
@@ -92,6 +92,9 @@ export default function DashboardPage() {
     let insuranceMonthly = 0;
     let insuranceAnnual = 0;
     let insuranceCount = 0;
+    let contractMonthly = 0;
+    let contractAnnual = 0;
+    let contractCount = 0;
     let subscriptionMonthly = 0;
     let subscriptionAnnual = 0;
     let subscriptionCount = 0;
@@ -106,6 +109,10 @@ export default function DashboardPage() {
         insuranceMonthly += m;
         insuranceAnnual += a;
         insuranceCount += 1;
+      } else if (c.type === "contract") {
+        contractMonthly += m;
+        contractAnnual += a;
+        contractCount += 1;
       } else {
         subscriptionMonthly += m;
         subscriptionAnnual += a;
@@ -119,6 +126,9 @@ export default function DashboardPage() {
       insuranceMonthly,
       insuranceAnnual,
       insuranceCount,
+      contractMonthly,
+      contractAnnual,
+      contractCount,
       subscriptionMonthly,
       subscriptionAnnual,
       subscriptionCount,
@@ -270,7 +280,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ================================================================= */}
-      {/* 2. METRIC TILES                                                   */}
+      {/* 2. METRIC TILES (GESAMT + 3 SPARTEN: VERSICHERUNGEN, VERTRÄGE, ABOS) */}
       {/* ================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 sm:gap-4">
         {/* Tile 1: Total Monthly */}
@@ -295,10 +305,15 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-            <span>{visibleActiveContracts.length} Verträge aktiv</span>
-            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-              100% kalkuliert
-            </span>
+            <span>{visibleActiveContracts.length} Einträge aktiv</span>
+            <Link
+              href="/contracts"
+              className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+            >
+              {urgentDeadlines.length > 0
+                ? `⚠️ ${urgentDeadlines.length} Frist(en)`
+                : "Alle prüfen ↗"}
+            </Link>
           </div>
         </div>
 
@@ -310,7 +325,7 @@ export default function DashboardPage() {
           }
           className={`text-left rounded-2xl border p-5 shadow-xs flex flex-col justify-between transition-all cursor-pointer ${
             typeFilter === "insurance"
-              ? "border-blue-500 bg-blue-500/5 ring-2 ring-blue-500/20"
+              ? "border-emerald-500 bg-emerald-500/5 ring-2 ring-emerald-500/20"
               : "border-slate-200/90 dark:border-slate-800/80 bg-white dark:bg-[#121622] hover:border-slate-300 dark:hover:border-slate-700"
           }`}
         >
@@ -318,12 +333,12 @@ export default function DashboardPage() {
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Versicherungen ({metrics.insuranceCount})
             </span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
           <div className="my-3">
-            <div className="text-2xl sm:text-3xl font-black tracking-tight tabular-nums text-blue-600 dark:text-blue-400">
+            <div className="text-2xl sm:text-3xl font-black tracking-tight tabular-nums text-emerald-600 dark:text-emerald-400">
               {formatEuro(metrics.insuranceMonthly)}
             </div>
             <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -331,18 +346,50 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 w-full">
-            <span>
-              {metrics.totalMonthly > 0
-                ? `${Math.round((metrics.insuranceMonthly / metrics.totalMonthly) * 100)}% der Ausgaben`
-                : "—"}
-            </span>
-            <span className="text-blue-600 dark:text-blue-400 font-bold">
+            <span>Haftpflicht, Kfz, BU, Hausrat…</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold">
               {typeFilter === "insurance" ? "✓ Filter aktiv" : "Filtern"}
             </span>
           </div>
         </button>
 
-        {/* Tile 3: Subscriptions */}
+        {/* Tile 3: Contracts / Utilities (Strom, GEZ, Handy) */}
+        <button
+          type="button"
+          onClick={() =>
+            setTypeFilter(typeFilter === "contract" ? "all" : "contract")
+          }
+          className={`text-left rounded-2xl border p-5 shadow-xs flex flex-col justify-between transition-all cursor-pointer ${
+            typeFilter === "contract"
+              ? "border-amber-500 bg-amber-500/5 ring-2 ring-amber-500/20"
+              : "border-slate-200/90 dark:border-slate-800/80 bg-white dark:bg-[#121622] hover:border-slate-300 dark:hover:border-slate-700"
+          }`}
+        >
+          <div className="flex items-center justify-between w-full">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Verträge &amp; Fixkosten ({metrics.contractCount})
+            </span>
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              <FileText className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="my-3">
+            <div className="text-2xl sm:text-3xl font-black tracking-tight tabular-nums text-amber-600 dark:text-amber-400">
+              {formatEuro(metrics.contractMonthly)}
+            </div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              {formatEuro(metrics.contractAnnual)} / Jahr
+            </div>
+          </div>
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 w-full">
+            <span>Strom, GEZ, Handy, Internet…</span>
+            <span className="text-amber-600 dark:text-amber-400 font-bold">
+              {typeFilter === "contract" ? "✓ Filter aktiv" : "Filtern"}
+            </span>
+          </div>
+        </button>
+
+        {/* Tile 4: Subscriptions (Streaming, Prime & Co.) */}
         <button
           type="button"
           onClick={() =>
@@ -358,7 +405,7 @@ export default function DashboardPage() {
         >
           <div className="flex items-center justify-between w-full">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Abos &amp; Fixkosten ({metrics.subscriptionCount})
+              Abos &amp; Streaming ({metrics.subscriptionCount})
             </span>
             <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
               <Tv className="w-4 h-4" />
@@ -373,45 +420,12 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 w-full">
-            <span>
-              {metrics.totalMonthly > 0
-                ? `${Math.round((metrics.subscriptionMonthly / metrics.totalMonthly) * 100)}% der Ausgaben`
-                : "—"}
-            </span>
+            <span>Netflix, Prime, Spotify, Cloud…</span>
             <span className="text-indigo-600 dark:text-indigo-400 font-bold">
               {typeFilter === "subscription" ? "✓ Filter aktiv" : "Filtern"}
             </span>
           </div>
         </button>
-
-        {/* Tile 4: Notice Radar & Deadlines */}
-        <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800/80 bg-white dark:bg-[#121622] p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Kündigungs-Ampel
-            </span>
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-              <CalendarClock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-3">
-            <div className="text-2xl sm:text-3xl font-black tracking-tight tabular-nums text-slate-900 dark:text-white">
-              {urgentDeadlines.length} Fristen
-            </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              in den nächsten 90 Tagen fällig
-            </div>
-          </div>
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-            <span>{cancellationRadar.length} Verträge mit Frist</span>
-            <Link
-              href="/contracts"
-              className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
-            >
-              Fristen prüfen ↗
-            </Link>
-          </div>
-        </div>
       </div>
 
       {/* ================================================================= */}

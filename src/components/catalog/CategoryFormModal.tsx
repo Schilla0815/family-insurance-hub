@@ -45,10 +45,15 @@ const DEFAULT_GROUPS_INSURANCE = [
   "Fahrzeuge, Reise & Haustiere",
 ];
 
-const DEFAULT_GROUPS_SUBSCRIPTION = [
+const DEFAULT_GROUPS_CONTRACT = [
   "Haushalt, Kommunikation & Mobilität",
-  "Streaming, Medien, Software & Freizeit",
   "Sport, Verein & Mitgliedschaften",
+  "Versorgung, Energie & Abgaben",
+];
+
+const DEFAULT_GROUPS_SUBSCRIPTION = [
+  "Streaming, Medien, Software & Freizeit",
+  "Cloud, Apps & Shopping",
 ];
 
 export function CategoryFormModal({
@@ -84,6 +89,8 @@ export function CategoryFormModal({
         .concat(
           type === "insurance"
             ? DEFAULT_GROUPS_INSURANCE
+            : type === "contract"
+            ? DEFAULT_GROUPS_CONTRACT
             : DEFAULT_GROUPS_SUBSCRIPTION
         )
     )
@@ -104,11 +111,19 @@ export function CategoryFormModal({
       const defaultGroup =
         initialType === "insurance"
           ? DEFAULT_GROUPS_INSURANCE[0]
+          : initialType === "contract"
+          ? DEFAULT_GROUPS_CONTRACT[0]
           : DEFAULT_GROUPS_SUBSCRIPTION[0];
       setGroupLabel(defaultGroup);
       setCustomGroup("");
       setDescription("");
-      setIconName(initialType === "insurance" ? "ShieldCheck" : "Tv");
+      setIconName(
+        initialType === "insurance"
+          ? "ShieldCheck"
+          : initialType === "contract"
+          ? "Zap"
+          : "Tv"
+      );
       setIsVisible(true);
     }
   }, [initialCategory, initialType, open]);
@@ -151,12 +166,12 @@ export function CategoryFormModal({
       open={open}
       onClose={onClose}
       title={initialCategory ? "Katalog-Kategorie anpassen" : "Neue Kategorie anlegen"}
-      subtitle="Katalog individuell um eigene Sparten und Abos erweitern"
+      subtitle="Katalog individuell um eigene Versicherungen, Verträge und Abos erweitern"
       maxWidthClass="max-w-xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Type switch */}
-        <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+        <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
           <button
             type="button"
             onClick={() => {
@@ -166,13 +181,30 @@ export function CategoryFormModal({
                 setGroupLabel(DEFAULT_GROUPS_INSURANCE[0]);
               }
             }}
-            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               type === "insurance"
-                ? "bg-white dark:bg-[#161c2a] text-blue-600 dark:text-blue-400 shadow-xs"
+                ? "bg-white dark:bg-[#161c2a] text-emerald-600 dark:text-emerald-400 shadow-xs"
                 : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
-            Versicherungssparte
+            🛡️ Versicherung
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setType("contract");
+              if (!initialCategory) {
+                setIconName("Zap");
+                setGroupLabel(DEFAULT_GROUPS_CONTRACT[0]);
+              }
+            }}
+            className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              type === "contract"
+                ? "bg-white dark:bg-[#161c2a] text-amber-600 dark:text-amber-400 shadow-xs"
+                : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+            }`}
+          >
+            📄 Vertrag (Fixkosten)
           </button>
           <button
             type="button"
@@ -183,13 +215,13 @@ export function CategoryFormModal({
                 setGroupLabel(DEFAULT_GROUPS_SUBSCRIPTION[0]);
               }
             }}
-            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               type === "subscription"
                 ? "bg-white dark:bg-[#161c2a] text-indigo-600 dark:text-indigo-400 shadow-xs"
                 : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
-            Sonstiges Abo / Fixkosten
+            📺 Abo / Streaming
           </button>
         </div>
 

@@ -6,8 +6,10 @@ import { usePathname } from "next/navigation";
 import {
   Calendar,
   CheckSquare,
+  Database,
   FileSpreadsheet,
   FileText,
+  HardDriveDownload,
   HeartHandshake,
   LayoutDashboard,
   Layers,
@@ -33,6 +35,7 @@ import { TaxReportModal } from "@/components/tax/TaxReportModal";
 import { EmergencyBinderPrintModal } from "@/components/emergency/EmergencyBinderPrintModal";
 import { PdfPreviewModal } from "@/components/paperless/PdfPreviewModal";
 import { CommandPalette } from "@/components/layout/CommandPalette";
+import { DatabaseBackupModal } from "@/components/backup/DatabaseBackupModal";
 import { formatEuro, getMonthlyCost } from "@/lib/calculations";
 
 const NAV_ITEMS = [
@@ -45,7 +48,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/contracts",
-    label: "Policen & Abos",
+    label: "Policen, Verträge & Abos",
     shortLabel: "Verträge",
     icon: FileSpreadsheet,
     badge: null,
@@ -84,6 +87,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     openContractModal,
     setCommandPaletteOpen,
     setCalendarExportModalOpen,
+    setBackupModalOpen,
     toastMessage,
     contracts,
     categories,
@@ -139,15 +143,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
 
-        {/* Quick Action: New Contract */}
-        <div className="p-3.5 pb-2">
+        {/* Quick Action: New Contract & DB Backup */}
+        <div className="p-3.5 pb-2 space-y-2">
           <button
             type="button"
             onClick={() => openContractModal()}
             className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-bold text-xs py-2.5 px-3.5 shadow-sm shadow-emerald-950/20 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Neuer Vertrag / Abo</span>
+            <span>Neuer Eintrag (Vers. / Vertrag / Abo)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setBackupModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#161c2a] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs py-2 px-3 transition-all cursor-pointer"
+          >
+            <Database className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Datenbank-Sicherung</span>
           </button>
         </div>
 
@@ -343,6 +356,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </strong>
                 </div>
 
+                {/* Database Backup Modal Trigger */}
+                <button
+                  type="button"
+                  onClick={() => setBackupModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2.5 sm:px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer"
+                  title="Datenbank-Sicherung (.json Snapshot & .csv Export)"
+                >
+                  <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="hidden sm:inline">Datenbank-Sicherung</span>
+                </button>
+
                 {/* Calendar Subscription Modal Trigger */}
                 <button
                   type="button"
@@ -487,6 +511,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <EmergencyBinderPrintModal />
       <PdfPreviewModal />
       <CommandPalette />
+      <DatabaseBackupModal />
 
       {/* Toast Notification Container */}
       {toastMessage && (

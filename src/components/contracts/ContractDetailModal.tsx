@@ -3,14 +3,17 @@
 import React, { useState } from "react";
 import {
   Calendar,
+  Clock,
   Copy,
   CreditCard,
   Edit3,
   ExternalLink,
   FileSignature,
+  Hash,
   Mail,
   PhoneCall,
   Shield,
+  SlidersHorizontal,
   Trash2,
   Users,
 } from "lucide-react";
@@ -20,9 +23,11 @@ import { ContractDocuments } from "@/components/paperless/ContractDocuments";
 import {
   formatDateDE,
   formatEuro,
+  formatTermAndNoticeSummary,
   getAnnualCost,
   getBillingCycleLabel,
   getCancellationInfo,
+  getContractTypeLabel,
   getMonthlyCost,
 } from "@/lib/calculations";
 
@@ -53,6 +58,9 @@ export function ContractDetailModal() {
   );
 
   const cancellation = getCancellationInfo(contract);
+  const termSummary = formatTermAndNoticeSummary(contract);
+  const effectiveCustomerNumber =
+    contract.customer_number || provider?.customer_number || "";
   const monthly = getMonthlyCost(contract.cost, contract.billing_cycle);
   const annual = getAnnualCost(contract.cost, contract.billing_cycle);
 
@@ -60,6 +68,10 @@ export function ContractDetailModal() {
     contract.title
   }“ (Vertrags-/Policennummer: ${
     contract.policy_number || "siehe Kundendaten"
+  }${
+    effectiveCustomerNumber
+      ? `, Kundennummer: ${effectiveCustomerNumber}`
+      : ""
   }) ordentlich und fristgerecht zum ${
     contract.contract_end_date
       ? formatDateDE(contract.contract_end_date)
@@ -71,7 +83,13 @@ export function ContractDetailModal() {
   const copyPolicyNumber = () => {
     if (!contract.policy_number) return;
     navigator.clipboard.writeText(contract.policy_number);
-    showToast(`Policennummer ${contract.policy_number} kopiert`);
+    showToast(`Policen-/Vertragsnummer ${contract.policy_number} kopiert`);
+  };
+
+  const copyCustomerNumber = () => {
+    if (!effectiveCustomerNumber) return;
+    navigator.clipboard.writeText(effectiveCustomerNumber);
+    showToast(`Kundennummer ${effectiveCustomerNumber} kopiert`);
   };
 
   return (
@@ -79,15 +97,31 @@ export function ContractDetailModal() {
       open={Boolean(contract)}
       onClose={closeContractDetail}
       title={contract.title}
-      subtitle={`${category?.name || contract.category_slug} • ${
-        provider?.name || "Direktvertrag"
-      }`}
+      subtitle={`${getContractTypeLabel(contract.type)} • ${
+        category?.name || contract.category_slug
+      } • ${provider?.name || "Direktvertrag"}`}
       maxWidthClass="max-w-3xl"
     >
       <div className="space-y-5">
         {/* Top Status & Quick Action Bar */}
         <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200 dark:border-slate-800">
           <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${
+                contract.type === "insurance"
+                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                  : contract.type === "contract"
+                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                  : "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300"
+              }`}
+            >
+              {contract.type === "insurance"
+                ? "🛡️ Versicherung"
+                : contract.type === "contract"
+                ? "📄 Vertrag / Fixkosten"
+                : "📺 Abo / Streaming"}
+            </span>
+
             <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300">
               {category?.name || contract.category_slug}
             </span>
@@ -161,28 +195,53 @@ export function ContractDetailModal() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 bg-slate-50/50 dark:bg-slate-950/40">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 bg-slate-50/50 dark:bg-slate-950/40 space-y-1.5">
             <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <Shield className="w-3.5 h-3.5 text-emerald-500" />
-              Policen- / Vertragsnummer
+              Policen-/Vertrags- &amp; Kundennr.
             </div>
-            <div className="flex items-center justify-between gap-2 mt-1">
-              <code className="text-sm font-mono font-bold text-slate-900 dark:text-white truncate">
-                {contract.policy_number || "Nicht hinterlegt"}
-              </code>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
+                  Vertrags-/Policennr.
+                </span>
+                <code className="text-xs font-mono font-bold text-slate-900 dark:text-white truncate block">
+                  {contract.policy_number || "Nicht hinterlegt"}
+                </code>
+              </div>
               {contract.policy_number && (
                 <button
                   type="button"
                   onClick={copyPolicyNumber}
-                  className="inline-flex items-center gap-1 rounded-md bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 rounded-md bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer shrink-0"
                 >
                   <Copy className="w-3 h-3" />
-                  Kopieren
                 </button>
               )}
             </div>
+
+            {effectiveCustomerNumber && (
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/70 dark:border-slate-800">
+                <div className="min-w-0">
+                  <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
+                    Kundennummer
+                  </span>
+                  <code className="text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 truncate block">
+                    {effectiveCustomerNumber}
+                  </code>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyCustomerNumber}
+                  className="inline-flex items-center gap-1 rounded-md bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer shrink-0"
+                >
+                  <Copy className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+
             {contract.deductible !== undefined && contract.type === "insurance" && (
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-xs text-slate-500 pt-0.5">
                 Selbstbeteiligung:{" "}
                 <strong className="text-slate-700 dark:text-slate-200">
                   {formatEuro(contract.deductible, 0)}
@@ -213,8 +272,78 @@ export function ContractDetailModal() {
             <div className="text-xs text-slate-500 mt-1">
               Nächste Zahlung: {formatDateDE(contract.next_payment_date)}
             </div>
+            {contract.contract_start_date && (
+              <div className="text-[11px] text-slate-500 mt-0.5">
+                Vertragsbeginn: <strong>{formatDateDE(contract.contract_start_date)}</strong>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Laufzeit & Kündigungsregelung + Variable Zusatzfelder */}
+        {(termSummary ||
+          contract.contract_start_date ||
+          (contract.custom_fields && contract.custom_fields.length > 0)) && (
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 space-y-3 bg-slate-50/40 dark:bg-slate-950/30">
+            {(termSummary || contract.contract_start_date) && (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <Clock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    Laufzeit &amp; Kündigungsregelung:
+                  </span>
+                  <span className="text-slate-600 dark:text-slate-400">
+                    {termSummary || "Individuell"}
+                  </span>
+                </div>
+                {contract.contract_end_date && (
+                  <span className="text-[11px] font-mono text-slate-500">
+                    Nächster Stichtag: {formatDateDE(contract.contract_end_date)}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {contract.custom_fields && contract.custom_fields.length > 0 && (
+              <div className="pt-2 border-t border-slate-200/70 dark:border-slate-800 space-y-2">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-500" />
+                  Spezifische Vertrags- &amp; Zusatzfelder
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  {contract.custom_fields.map((cf, i) => (
+                    <div
+                      key={cf.key || i}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#121622] px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-bold text-slate-400 truncate">
+                          {cf.label}
+                        </div>
+                        <div className="text-xs font-mono font-semibold text-slate-900 dark:text-white truncate">
+                          {cf.value}
+                        </div>
+                      </div>
+                      {cf.value && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(cf.value);
+                            showToast(`${cf.label} kopiert`);
+                          }}
+                          className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+                          title={`${cf.label} kopieren`}
+                        >
+                          <Copy className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Coverage, Family Members & Provider Hotline */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

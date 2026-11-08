@@ -27,6 +27,7 @@ import { CategoryIcon } from "@/components/ui/CategoryIcon";
 import {
   formatDateDE,
   formatEuro,
+  formatTermAndNoticeSummary,
   getAnnualCost,
   getBillingCycleShort,
   getCancellationInfo,
@@ -74,9 +75,17 @@ export default function ContractsPage() {
       }
       if (q) {
         const prov = providers.find((p) => p.id === c.provider_id);
+        const custNo = c.customer_number || prov?.customer_number || "";
+        const customFieldsMatch = (c.custom_fields || []).some(
+          (cf) =>
+            cf.label.toLowerCase().includes(q) ||
+            cf.value.toLowerCase().includes(q)
+        );
         const match =
           c.title.toLowerCase().includes(q) ||
           c.policy_number.toLowerCase().includes(q) ||
+          custNo.toLowerCase().includes(q) ||
+          customFieldsMatch ||
           (c.paperless_tag && c.paperless_tag.toLowerCase().includes(q)) ||
           (prov && prov.name.toLowerCase().includes(q)) ||
           (cat && cat.name.toLowerCase().includes(q));
@@ -147,7 +156,7 @@ export default function ContractsPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2.5 text-slate-900 dark:text-white">
             <FileSpreadsheet className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-            <span>Policen &amp; Abonnements ({filteredContracts.length})</span>
+            <span>Versicherungen, Verträge &amp; Abos ({filteredContracts.length})</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             Summe der sichtbaren Verträge:{" "}
@@ -215,9 +224,10 @@ export default function ContractsPage() {
           <div className="flex flex-wrap items-center gap-1.5">
             {(
               [
-                { id: "all", label: "Alle Verträge" },
+                { id: "all", label: "Alle Einträge" },
                 { id: "insurance", label: "🛡️ Versicherungen" },
-                { id: "subscription", label: "📺 Sonstige Abos" },
+                { id: "contract", label: "📄 Verträge (Strom, GEZ, Handy)" },
+                { id: "subscription", label: "📺 Abos (Streaming, Prime…)" },
               ] as const
             ).map((btn) => (
               <button
@@ -337,7 +347,9 @@ export default function ContractsPage() {
                       <div
                         className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
                           c.type === "insurance"
-                            ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                            : c.type === "contract"
+                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
                             : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20"
                         }`}
                       >
@@ -354,9 +366,26 @@ export default function ContractsPage() {
                         >
                           {c.title}
                         </button>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate mt-0.5">
-                          {provName}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            {provName}
+                          </span>
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                              c.type === "insurance"
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300"
+                                : c.type === "contract"
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300"
+                                : "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300"
+                            }`}
+                          >
+                            {c.type === "insurance"
+                              ? "Versicherung"
+                              : c.type === "contract"
+                              ? "Vertrag"
+                              : "Abo"}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -406,11 +435,11 @@ export default function ContractsPage() {
                     )}
                   </div>
 
-                  {/* Metadata: Policy Number + Insured Persons */}
+                  {/* Metadata: Policy Number + Customer Number + Term + Custom Fields */}
                   <div className="space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
                     {c.policy_number && (
                       <div className="flex items-center justify-between text-[11px]">
-                        <span>Police / Kunden-Nr.:</span>
+                        <span>Policen- / Vertragsnr.:</span>
                         <button
                           type="button"
                           onClick={() => {
@@ -425,8 +454,35 @@ export default function ContractsPage() {
                       </div>
                     )}
 
+                    {(c.customer_number ||
+                      providers.find((p) => p.id === c.provider_id)
+                        ?.customer_number) && (
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span>Kundennummer:</span>
+                        <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">
+                          {c.customer_number ||
+                            providers.find((p) => p.id === c.provider_id)
+                              ?.customer_number}
+                        </span>
+                      </div>
+                    )}
+
+                    {(c.cancellation_terms_text ||
+                      c.initial_term_months ||
+                      c.notice_period_value) && (
+                      <div className="flex items-center justify-between gap-2 text-[11px]">
+                        <span className="shrink-0">Laufzeit / Frist:</span>
+                        <span
+                          className="font-medium text-slate-700 dark:text-slate-300 truncate text-right"
+                          title={formatTermAndNoticeSummary(c)}
+                        >
+                          {formatTermAndNoticeSummary(c)}
+                        </span>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between text-[11px]">
-                      <span>Mitversichert:</span>
+                      <span>Zugeordnet:</span>
                       <span className="font-semibold text-slate-700 dark:text-slate-300">
                         {members
                           .filter((m) => c.insured_member_ids.includes(m.id))
@@ -434,6 +490,22 @@ export default function ContractsPage() {
                           .join(", ") || "—"}
                       </span>
                     </div>
+
+                    {c.custom_fields && c.custom_fields.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {c.custom_fields.slice(0, 3).map((cf, i) => (
+                          <span
+                            key={cf.key || i}
+                            className="inline-flex items-center gap-1 rounded-md bg-slate-100 dark:bg-[#161c2a] border border-slate-200/70 dark:border-slate-800 px-1.5 py-0.5 text-[10px] font-mono text-slate-700 dark:text-slate-300"
+                          >
+                            <span className="text-slate-400 font-sans">
+                              {cf.label}:
+                            </span>
+                            <span className="font-bold">{cf.value}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     {cancellation.state !== "none" && (
                       <div className="flex items-center justify-between text-[11px]">

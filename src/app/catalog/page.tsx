@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
+  FileText,
   Info,
   LayoutGrid,
   List,
@@ -116,6 +117,10 @@ export default function CatalogSelectionPage() {
       (c) => c.type === "insurance" && c.is_visible
     ).length;
     const insTotal = categories.filter((c) => c.type === "insurance").length;
+    const conVisible = categories.filter(
+      (c) => c.type === "contract" && c.is_visible
+    ).length;
+    const conTotal = categories.filter((c) => c.type === "contract").length;
     const subVisible = categories.filter(
       (c) => c.type === "subscription" && c.is_visible
     ).length;
@@ -124,10 +129,12 @@ export default function CatalogSelectionPage() {
     return {
       insVisible,
       insTotal,
+      conVisible,
+      conTotal,
       subVisible,
       subTotal,
-      totalVisible: insVisible + subVisible,
-      totalAll: insTotal + subTotal,
+      totalVisible: insVisible + conVisible + subVisible,
+      totalAll: insTotal + conTotal + subTotal,
     };
   }, [categories]);
 
@@ -236,7 +243,7 @@ export default function CatalogSelectionPage() {
       <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800/80 bg-white dark:bg-[#121622] p-4 space-y-3 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Type Switch */}
-          <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-[#161c2a]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-[#161c2a]">
             <button
               type="button"
               onClick={() => setActiveTab("all")}
@@ -253,12 +260,24 @@ export default function CatalogSelectionPage() {
               onClick={() => setActiveTab("insurance")}
               className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === "insurance"
-                  ? "bg-white dark:bg-[#121622] text-blue-600 dark:text-blue-400 shadow-2xs"
+                  ? "bg-white dark:bg-[#121622] text-emerald-600 dark:text-emerald-400 shadow-2xs"
                   : "text-slate-600 dark:text-slate-400"
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
               Versicherungen ({stats.insVisible}/{stats.insTotal})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("contract")}
+              className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === "contract"
+                  ? "bg-white dark:bg-[#121622] text-amber-600 dark:text-amber-400 shadow-2xs"
+                  : "text-slate-600 dark:text-slate-400"
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Verträge ({stats.conVisible}/{stats.conTotal})
             </button>
             <button
               type="button"
@@ -393,7 +412,9 @@ export default function CatalogSelectionPage() {
                           <div
                             className={`p-2.5 rounded-xl shrink-0 ${
                               cat.type === "insurance"
-                                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                : cat.type === "contract"
+                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
                                 : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20"
                             }`}
                           >
@@ -410,11 +431,17 @@ export default function CatalogSelectionPage() {
                               <span
                                 className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                                   cat.type === "insurance"
-                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300"
+                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300"
+                                    : cat.type === "contract"
+                                    ? "bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300"
                                     : "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300"
                                 }`}
                               >
-                                {cat.type === "insurance" ? "Versicherung" : "Abo"}
+                                {cat.type === "insurance"
+                                  ? "Versicherung"
+                                  : cat.type === "contract"
+                                  ? "Vertrag"
+                                  : "Abo"}
                               </span>
                             </div>
                             <span className="text-xs text-slate-500 dark:text-slate-400 block mt-1 leading-relaxed">

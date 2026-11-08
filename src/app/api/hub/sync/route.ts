@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   checkPocketBaseHealth,
+  pullFromLocalStoreFallback,
   pullFromPocketBase,
   pushToPocketBase,
 } from "@/lib/pocketbase-server";
@@ -9,11 +10,13 @@ export async function GET() {
   try {
     const health = await checkPocketBaseHealth();
     if (!health.online) {
+      const fallback = pullFromLocalStoreFallback();
       return NextResponse.json({
         connected: false,
         url: health.url,
         error: health.error,
-        data: null,
+        hasData: fallback.hasData,
+        data: fallback.hasData ? fallback.data : null,
       });
     }
 
@@ -24,12 +27,15 @@ export async function GET() {
       ...payload,
     });
   } catch (err: unknown) {
+    const fallback = pullFromLocalStoreFallback();
     return NextResponse.json(
       {
         connected: false,
+        hasData: fallback.hasData,
+        data: fallback.hasData ? fallback.data : null,
         error: err instanceof Error ? err.message : String(err),
       },
-      { status: 500 }
+      { status: 200 }
     );
   }
 }

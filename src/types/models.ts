@@ -10,7 +10,15 @@ export interface UserAccount {
   lastLoginAt?: string; // ISO
 }
 
-export type ContractType = "insurance" | "subscription";
+export type ContractType = "insurance" | "contract" | "subscription";
+
+export type NoticePeriodUnit = "days" | "weeks" | "months";
+
+export interface CustomField {
+  key: string;
+  label: string;
+  value: string;
+}
 
 export type PriorityTier = "muss" | "empfohlen" | "kann";
 
@@ -64,6 +72,7 @@ export interface InsurerProvider {
   portal_url?: string;
   emergency_hotline?: string;
   support_email?: string;
+  customer_number?: string; // Standard-Kundennummer bei diesem Anbieter
   paperless_correspondent_id?: number;
   paperless_correspondent_name?: string;
   category_focus?: ContractType;
@@ -94,7 +103,8 @@ export interface Contract {
   provider_id: string;
   policy_holder_id: string;
   insured_member_ids: string[];
-  policy_number: string; // Gleichzeitig Matching-Key für paperless-ngx
+  policy_number: string; // Gleichzeitig Matching-Key für paperless-ngx (Policen- / Vertragsnummer)
+  customer_number?: string; // Spezifische Kundennummer / Teilnehmernummer bei diesem Vertrag
   paperless_tag?: string; // Spezifisches Tag in paperless-ngx
   paperless_custom_query?: string; // Optionaler Suchbegriff für paperless-ngx
   paperless_document_id?: number; // Fest verknüpftes Hauptdokument (gepinnte ID aus paperless-ngx)
@@ -103,9 +113,17 @@ export interface Contract {
   billing_cycle: BillingCycle;
   next_payment_date: string; // YYYY-MM-DD
   deductible?: number; // Selbstbeteiligung in €
-  coverage_amount?: string; // Deckungssumme
-  cancellation_period_days?: number; // Kündigungsfrist in Tagen
-  contract_end_date?: string; // YYYY-MM-DD
+  coverage_amount?: string; // Deckungssumme / Leistungsumfang
+  contract_start_date?: string; // YYYY-MM-DD (Vertragsbeginn)
+  initial_term_months?: number; // Mindestvertragslaufzeit in Monaten (z. B. 24 Monate)
+  auto_renewal_months?: number; // Verlängerungsintervall nach Mindestlaufzeit in Monaten (z. B. 1 Monat = monatlich kündbar)
+  notice_period_value?: number; // Zahlenwert der Kündigungsfrist (z. B. 1, 3, 30)
+  notice_period_unit?: NoticePeriodUnit; // Einheit der Kündigungsfrist: "days" | "weeks" | "months"
+  notice_period_after_initial_months?: number; // Kündigungsfrist nach Ablauf der Mindestlaufzeit (z. B. 1 Monat)
+  cancellation_terms_text?: string; // Freitext für flexible Sonderregeln (z. B. "24 Monate Mindestlaufzeit, danach monatlich kündbar")
+  cancellation_period_days?: number; // Kündigungsfrist in Tagen (Abwärtskompatibel & für Berechnungen)
+  contract_end_date?: string; // YYYY-MM-DD (Nächstes Vertragsende / Hauptfälligkeit)
+  custom_fields?: CustomField[]; // Frei definierbare Zusatzfelder (z. B. Zählernummer, Rufnummer, Lizenzschlüssel)
   status: ContractStatus;
   emergency_group?: EmergencyGroup;
   payment_method?: string;

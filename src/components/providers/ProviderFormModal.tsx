@@ -11,7 +11,9 @@ import {
   ChevronRight,
   ExternalLink,
   FileCheck2,
+  FileText,
   Globe,
+  Hash,
   Mail,
   Phone,
   Save,
@@ -39,6 +41,7 @@ export function ProviderFormModal({
 
   const [name, setName] = useState("");
   const [categoryFocus, setCategoryFocus] = useState<ContractType>("insurance");
+  const [customerNumber, setCustomerNumber] = useState("");
   const [portalUrl, setPortalUrl] = useState("");
   const [emergencyHotline, setEmergencyHotline] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
@@ -52,6 +55,7 @@ export function ProviderFormModal({
     if (initialProvider) {
       setName(initialProvider.name);
       setCategoryFocus(initialProvider.category_focus || "insurance");
+      setCustomerNumber(initialProvider.customer_number || "");
       setPortalUrl(initialProvider.portal_url || "");
       setEmergencyHotline(initialProvider.emergency_hotline || "");
       setSupportEmail(initialProvider.support_email || "");
@@ -65,6 +69,7 @@ export function ProviderFormModal({
     } else {
       setName(initialName);
       setCategoryFocus("insurance");
+      setCustomerNumber("");
       setPortalUrl("");
       setEmergencyHotline("");
       setSupportEmail("");
@@ -93,6 +98,7 @@ export function ProviderFormModal({
       id: initialProvider?.id,
       name: cleanName,
       category_focus: categoryFocus,
+      customer_number: customerNumber.trim() || undefined,
       portal_url: portalUrl.trim() || undefined,
       emergency_hotline: emergencyHotline.trim() || undefined,
       support_email: supportEmail.trim() || undefined,
@@ -208,31 +214,59 @@ export function ProviderFormModal({
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Hauptbereich / Sparte
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => setCategoryFocus("insurance")}
-                  className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                     categoryFocus === "insurance"
                       ? "border-emerald-600 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                       : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400"
                   }`}
                 >
-                  <Shield className="w-4 h-4 text-emerald-500" />
-                  Versicherer / Police
+                  <Shield className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span className="truncate">Versicherer</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCategoryFocus("contract")}
+                  className={`flex items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    categoryFocus === "contract"
+                      ? "border-amber-600 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                      : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400"
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span className="truncate">Vertrag / Versorger</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setCategoryFocus("subscription")}
-                  className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                     categoryFocus === "subscription"
                       ? "border-indigo-600 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
                       : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400"
                   }`}
                 >
-                  <Tv className="w-4 h-4 text-indigo-500" />
-                  Abonnement / Dienst
+                  <Tv className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                  <span className="truncate">Abo-Dienst</span>
                 </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                Standard-Kundennummer / Mitgliedsnummer (optional)
+              </label>
+              <div className="relative">
+                <Hash className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={customerNumber}
+                  onChange={(e) => setCustomerNumber(e.target.value)}
+                  placeholder="z. B. KD-9941820 (wird bei neuen Verträgen vorgeschlagen)"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#161c2a] pl-9 pr-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                />
               </div>
             </div>
 
